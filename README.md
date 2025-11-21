@@ -2,7 +2,9 @@
 
 ## Overview
 
-![mandelbrot-set](./mandel.png)
+![mandel](./mandel.png)
+
+![mandel-big](./mandel-big.png)
 
 ## Performance
 

@@ -5,11 +5,9 @@ use std::str::FromStr;
 #[derive(Copy, Clone)]
 struct Rgb(u8, u8, u8);
 
-const RGB_0: Rgb = Rgb(0, 0, 0);
-
 type Comp = Complex<f64>;
 
-fn escape_time(c: Comp, limit: usize) -> Option<usize> {
+fn escape_iterations(c: Comp, limit: usize) -> Option<usize> {
   let mut z = Complex { re: 0.0, im: 0.0 };
   for i in 0..limit {
     if z.norm_sqr() > 4.0 {
@@ -45,20 +43,23 @@ fn pixel_to_point(bounds: (usize, usize), pixel: (usize, usize), upper_left: Com
   }
 }
 
+const LIMIT: usize = 10000;
+const MIN_COLOR_INDEX: usize = 0;
+const MAX_COLOR_INDEX: usize = 256 * 256 * 256;
+
 fn render(pixels: &mut [Rgb], bounds: (usize, usize), upper_left: Comp, lower_right: Comp) {
   assert_eq!(pixels.len(), bounds.0 * bounds.1);
   for row in 0..bounds.1 {
     for column in 0..bounds.0 {
       let point = pixel_to_point(bounds, (column, row), upper_left, lower_right);
-      let color = match escape_time(point, 300) {
-        Some(count) => (300 - count) as u8,
-        _ => 0,
+      let iterations = escape_iterations(point, LIMIT);
+      pixels[row * bounds.0 + column] = match iterations {
+        Some(mut value) => {
+          value *= (MAX_COLOR_INDEX - MIN_COLOR_INDEX) / LIMIT;
+          Rgb((value / 65536) as u8, (value / 256) as u8, value as u8)
+        }
+        _ => Rgb(0, 0, 0),
       };
-      if color > 0 {
-        pixels[row * bounds.0 + column] = Rgb(20, color, 50);
-      } else {
-        pixels[row * bounds.0 + column] = RGB_0;
-      }
     }
   }
 }
@@ -77,7 +78,7 @@ fn main() {
   let bounds = parse_pair(&args[2], 'x').expect("error parsing image dimensions");
   let upper_left = parse_complex(&args[3]).expect("error parsing upper left corner point");
   let lower_right = parse_complex(&args[4]).expect("error parsing lower right corner point");
-  let mut pixels = vec![RGB_0; bounds.0 * bounds.1];
+  let mut pixels = vec![Rgb(0, 0, 0); bounds.0 * bounds.1];
   let threads = 16;
   let rows_per_band = bounds.1 / threads;
   {
