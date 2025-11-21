@@ -43,20 +43,23 @@ fn pixel_to_point(bounds: (usize, usize), pixel: (usize, usize), upper_left: Com
   }
 }
 
+const LIMIT: usize = 10000;
+const MIN_COLOR_INDEX: usize = 0;
+const MAX_COLOR_INDEX: usize = 256 * 256 * 256;
+
 fn render(pixels: &mut [Rgb], bounds: (usize, usize), upper_left: Comp, lower_right: Comp) {
   assert_eq!(pixels.len(), bounds.0 * bounds.1);
   for row in 0..bounds.1 {
     for column in 0..bounds.0 {
       let point = pixel_to_point(bounds, (column, row), upper_left, lower_right);
-      let color = match escape_iterations(point, 300) {
-        Some(count) => (300 - count) as u8,
-        _ => 0,
+      let iterations = escape_iterations(point, LIMIT);
+      pixels[row * bounds.0 + column] = match iterations {
+        Some(mut value) => {
+          value *= (MAX_COLOR_INDEX - MIN_COLOR_INDEX) / LIMIT;
+          Rgb((value / 65536) as u8, (value / 256) as u8, value as u8)
+        }
+        _ => Rgb(0, 0, 0),
       };
-      if color > 0 {
-        pixels[row * bounds.0 + column] = Rgb(20, color, 50);
-      } else {
-        pixels[row * bounds.0 + column] = Rgb(0, 0, 0);
-      }
     }
   }
 }
