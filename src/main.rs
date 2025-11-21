@@ -43,7 +43,7 @@ fn pixel_to_point(bounds: (usize, usize), pixel: (usize, usize), upper_left: Com
   }
 }
 
-const LIMIT: usize = 10000;
+const LIMIT: usize = 500;
 const MIN_COLOR_INDEX: usize = 0;
 const MAX_COLOR_INDEX: usize = 256 * 256 * 256;
 
