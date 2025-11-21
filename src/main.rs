@@ -10,116 +10,97 @@ const RGB_0: Rgb = Rgb(0, 0, 0);
 type Comp = Complex<f64>;
 
 fn escape_time(c: Comp, limit: usize) -> Option<usize> {
-    let mut z = Complex { re: 0.0, im: 0.0 };
-    for i in 0..limit {
-        if z.norm_sqr() > 4.0 {
-            return Some(i);
-        }
-        z = z * z + c;
+  let mut z = Complex { re: 0.0, im: 0.0 };
+  for i in 0..limit {
+    if z.norm_sqr() > 4.0 {
+      return Some(i);
     }
-    None
+    z = z * z + c;
+  }
+  None
 }
 
 fn parse_pair<T: FromStr>(s: &str, separator: char) -> Option<(T, T)> {
-    match s.find(separator) {
-        Some(index) => match (T::from_str(&s[..index]), T::from_str(&s[index + 1..])) {
-            (Ok(l), Ok(r)) => Some((l, r)),
-            _ => None,
-        },
-        _ => None,
-    }
+  match s.find(separator) {
+    Some(index) => match (T::from_str(&s[..index]), T::from_str(&s[index + 1..])) {
+      (Ok(l), Ok(r)) => Some((l, r)),
+      _ => None,
+    },
+    _ => None,
+  }
 }
 
 fn parse_complex(s: &str) -> Option<Comp> {
-    match parse_pair(s, ',') {
-        Some((re, im)) => Some(Comp { re, im }),
-        _ => None,
-    }
+  match parse_pair(s, ',') {
+    Some((re, im)) => Some(Comp { re, im }),
+    _ => None,
+  }
 }
 
-fn pixel_to_point(
-    bounds: (usize, usize),
-    pixel: (usize, usize),
-    upper_left: Comp,
-    lower_right: Comp,
-) -> Complex<f64> {
-    let (width, height) = (
-        lower_right.re - upper_left.re,
-        upper_left.im - lower_right.im,
-    );
-    Complex {
-        re: upper_left.re + pixel.0 as f64 * width / bounds.0 as f64,
-        im: upper_left.im - pixel.1 as f64 * height / bounds.1 as f64,
-    }
+fn pixel_to_point(bounds: (usize, usize), pixel: (usize, usize), upper_left: Comp, lower_right: Comp) -> Complex<f64> {
+  let (width, height) = (lower_right.re - upper_left.re, upper_left.im - lower_right.im);
+  Complex {
+    re: upper_left.re + pixel.0 as f64 * width / bounds.0 as f64,
+    im: upper_left.im - pixel.1 as f64 * height / bounds.1 as f64,
+  }
 }
 
 fn render(pixels: &mut [Rgb], bounds: (usize, usize), upper_left: Comp, lower_right: Comp) {
-    assert_eq!(pixels.len(), bounds.0 * bounds.1);
-    for row in 0..bounds.1 {
-        for column in 0..bounds.0 {
-            let point = pixel_to_point(bounds, (column, row), upper_left, lower_right);
-            let color = match escape_time(point, 300) {
-                Some(count) => (300 - count) as u8,
-                _ => 0,
-            };
-            if color > 0 {
-                pixels[row * bounds.0 + column] = Rgb(20, color, 50);
-            } else {
-                pixels[row * bounds.0 + column] = RGB_0;
-            }
-        }
+  assert_eq!(pixels.len(), bounds.0 * bounds.1);
+  for row in 0..bounds.1 {
+    for column in 0..bounds.0 {
+      let point = pixel_to_point(bounds, (column, row), upper_left, lower_right);
+      let color = match escape_time(point, 300) {
+        Some(count) => (300 - count) as u8,
+        _ => 0,
+      };
+      if color > 0 {
+        pixels[row * bounds.0 + column] = Rgb(20, color, 50);
+      } else {
+        pixels[row * bounds.0 + column] = RGB_0;
+      }
     }
+  }
 }
 
 fn write_image(filename: &str, pixels: &[u8], bounds: (usize, usize)) {
-    image::save_buffer(
-        filename,
-        pixels,
-        bounds.0 as u32,
-        bounds.1 as u32,
-        image::ColorType::Rgb8,
-    )
-      .unwrap();
+  image::save_buffer(filename, pixels, bounds.0 as u32, bounds.1 as u32, image::ColorType::Rgb8).unwrap();
 }
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() != 5 {
-        eprintln!("Usage: {} FILE PIXELS UPPER_LEFT LOWER_RIGHT", args[0]);
-        eprintln!(
-            "Example: {} mandel.png 1000x750 -1.20,0.35 -1,0.20",
-            args[0]
-        );
-        std::process::exit(1);
-    }
-    let bounds = parse_pair(&args[2], 'x').expect("error parsing image dimensions");
-    let upper_left = parse_complex(&args[3]).expect("error parsing upper left corner point");
-    let lower_right = parse_complex(&args[4]).expect("error parsing lower right corner point");
-    let mut pixels = vec![RGB_0; bounds.0 * bounds.1];
-    let threads = 16;
-    let rows_per_band = bounds.1 / threads;
-    {
-        let bands: Vec<&mut [Rgb]> = pixels.chunks_mut(rows_per_band * bounds.0).collect();
-        crossbeam::scope(|spawner| {
-            for (i, band) in bands.into_iter().enumerate() {
-                let top = rows_per_band * i;
-                let height = band.len() / bounds.0;
-                let band_bounds = (bounds.0, height);
-                let band_upper_left = pixel_to_point(bounds, (0, top), upper_left, lower_right);
-                let band_lower_right =
-                  pixel_to_point(bounds, (bounds.0, top + height), upper_left, lower_right);
-                spawner.spawn(move |_| {
-                    render(band, band_bounds, band_upper_left, band_lower_right);
-                });
-            }
-        })
-          .unwrap();
-    }
-    let mut buffer = vec![];
-    for rgb in pixels {
-        buffer.push(rgb.0);
-        buffer.push(rgb.1);
-        buffer.push(rgb.2);
-    }
-    write_image(&args[1], &buffer, bounds);
+  let args: Vec<String> = env::args().collect();
+  if args.len() != 5 {
+    eprintln!("Usage: {} FILE PIXELS UPPER_LEFT LOWER_RIGHT", args[0]);
+    eprintln!("Example: {} mandel.png 1000x750 -1.20,0.35 -1,0.20", args[0]);
+    std::process::exit(1);
+  }
+  let bounds = parse_pair(&args[2], 'x').expect("error parsing image dimensions");
+  let upper_left = parse_complex(&args[3]).expect("error parsing upper left corner point");
+  let lower_right = parse_complex(&args[4]).expect("error parsing lower right corner point");
+  let mut pixels = vec![RGB_0; bounds.0 * bounds.1];
+  let threads = 16;
+  let rows_per_band = bounds.1 / threads;
+  {
+    let bands: Vec<&mut [Rgb]> = pixels.chunks_mut(rows_per_band * bounds.0).collect();
+    crossbeam::scope(|spawner| {
+      for (i, band) in bands.into_iter().enumerate() {
+        let top = rows_per_band * i;
+        let height = band.len() / bounds.0;
+        let band_bounds = (bounds.0, height);
+        let band_upper_left = pixel_to_point(bounds, (0, top), upper_left, lower_right);
+        let band_lower_right = pixel_to_point(bounds, (bounds.0, top + height), upper_left, lower_right);
+        spawner.spawn(move |_| {
+          render(band, band_bounds, band_upper_left, band_lower_right);
+        });
+      }
+    })
+    .unwrap();
+  }
+  let mut buffer = vec![];
+  for rgb in pixels {
+    buffer.push(rgb.0);
+    buffer.push(rgb.1);
+    buffer.push(rgb.2);
+  }
+  write_image(&args[1], &buffer, bounds);
 }

@@ -1,0 +1,57 @@
+version: '3'
+
+silent: true
+
+tasks:
+
+  build:
+    desc: Builds in debug mode
+    cmds:
+      - cmd: cargo +stable build
+
+  clean:
+    desc: Cleans all targets
+    cmds:
+      - cmd: cargo clean
+
+  clippy:
+    desc: Runs clippy for all targets
+    cmds:
+      - cmd: cargo +stable clippy --all-targets
+
+  fmt:
+    desc: Runs code formatter
+    cmds:
+      - cmd: cargo +nightly fmt
+
+  test:
+    desc: Runs tests in debug mode
+    cmds:
+      - cmd: cargo +stable test
+
+  install:
+    desc: Builds and installs release version
+    cmds:
+      - cmd: cargo +stable install mandelbrot-set --path=. --force
+
+  uninstall:
+    desc: Uninstalls the release version
+    cmds:
+      - cmd: cargo +stable uninstall mandelbrot-set
+
+  run:
+    desc: Generated example Mandelbrot set
+    cmds:
+      - cmd: cargo +stable run --release -- mandel.png 4000x3000 -1.20,0.35 -1,0.20
+
+  time:
+    desc: Generated example Mandelbrot set with measuring time
+    cmds:
+      - cmd: cargo build --release
+      - cmd: time ./target/release/mandelbrot-set mandel.png 4000x3000 -1.20,0.35 -1,0.20
+
+  time-big:
+    desc: Generated example Mandelbrot set with measuring time (bigger version)
+    cmds:
+      - cmd: cargo build --release
+      - cmd: time ./target/release/mandelbrot-set mandel-big.png 10000x8500 -2.5,-1.5 1.0,1.5
