@@ -39,10 +39,15 @@ tasks:
     cmds:
       - cmd: cargo +stable uninstall mandelbrot-set
 
-  run:
+  gen:
     desc: Generated example Mandelbrot set
     cmds:
       - cmd: cargo +stable run --release -- mandel.png 4000x3000 -1.20,0.35 -1,0.20
+
+  gen-big:
+    desc: Generated example Mandelbrot set
+    cmds:
+      - cmd: cargo +stable run --release -- mandel-big.png 10000x8500 -2.5,-1.5 1.0,1.5
 
   time:
     desc: Generated example Mandelbrot set with measuring time
